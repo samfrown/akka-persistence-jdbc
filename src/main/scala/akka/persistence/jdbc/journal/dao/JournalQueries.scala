@@ -29,8 +29,11 @@ class JournalQueries(val profile: JdbcProfile, override val journalTableCfg: Jou
   def writeJournalRows(xs: Seq[JournalRow]) =
     JournalTableC ++= xs.sortBy(_.sequenceNumber)
 
+  private def selectAllJournalForPersistenceIdDesc(persistenceId: Rep[String]) =
+    selectAllJournalForPersistenceId(persistenceId).sortBy(_.sequenceNumber.desc)
+
   private def selectAllJournalForPersistenceId(persistenceId: Rep[String]) =
-    JournalTable.filter(_.persistenceId === persistenceId).sortBy(_.sequenceNumber.desc)
+    JournalTable.filter(_.persistenceId === persistenceId)
 
   def delete(persistenceId: String, toSequenceNr: Long) = {
     JournalTable
@@ -58,18 +61,18 @@ class JournalQueries(val profile: JdbcProfile, override val journalTableCfg: Jou
       .filter(_.deleted === false)
       .map(_.deleted).update(true)
 
-  private def _highestSequenceNrForPersistenceId(persistenceId: Rep[String]): Query[Rep[Long], Long, Seq] =
-    selectAllJournalForPersistenceId(persistenceId).map(_.sequenceNumber).take(1)
+  private def _highestSequenceNrForPersistenceId(persistenceId: Rep[String]): Rep[Option[Long]] =
+    selectAllJournalForPersistenceId(persistenceId).map(_.sequenceNumber).max
 
-  private def _highestMarkedSequenceNrForPersistenceId(persistenceId: Rep[String]): Query[Rep[Long], Long, Seq] =
-    selectAllJournalForPersistenceId(persistenceId).filter(_.deleted === true).map(_.sequenceNumber)
+  private def _highestMarkedSequenceNrForPersistenceId(persistenceId: Rep[String]): Rep[Option[Long]] =
+    selectAllJournalForPersistenceId(persistenceId).filter(_.deleted === true).map(_.sequenceNumber).max
 
   val highestSequenceNrForPersistenceId = Compiled(_highestSequenceNrForPersistenceId _)
 
   val highestMarkedSequenceNrForPersistenceId = Compiled(_highestMarkedSequenceNrForPersistenceId _)
 
   private def _selectByPersistenceIdAndMaxSequenceNumber(persistenceId: Rep[String], maxSequenceNr: Rep[Long]) =
-    selectAllJournalForPersistenceId(persistenceId).filter(_.sequenceNumber <= maxSequenceNr)
+    selectAllJournalForPersistenceIdDesc(persistenceId).filter(_.sequenceNumber <= maxSequenceNr)
 
   val selectByPersistenceIdAndMaxSequenceNumber = Compiled(_selectByPersistenceIdAndMaxSequenceNumber _)
 

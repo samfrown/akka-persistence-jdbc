@@ -137,10 +137,10 @@ trait BaseByteArrayJournalDao extends JournalDaoWithUpdates {
   }
 
   private def highestMarkedSequenceNr(persistenceId: String) =
-    queries.highestMarkedSequenceNrForPersistenceId(persistenceId).result.headOption
+    queries.highestMarkedSequenceNrForPersistenceId(persistenceId).result
 
   override def highestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = for {
-    maybeHighestSeqNo <- db.run(queries.highestSequenceNrForPersistenceId(persistenceId).result.headOption)
+    maybeHighestSeqNo <- db.run(queries.highestSequenceNrForPersistenceId(persistenceId).result)
   } yield maybeHighestSeqNo.getOrElse(0L)
 
   override def messages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long): Source[Try[PersistentRepr], NotUsed] =
